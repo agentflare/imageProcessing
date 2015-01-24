@@ -12,6 +12,7 @@ import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.*;
 import java.util.*;
+import javax.imageio.*;
 
 public class ImageDicer
     extends Frame {
@@ -21,9 +22,10 @@ public class ImageDicer
    * "default" is used.
   **/
   public static void main(String[] args) {
-    String fileName = "default";
+    String fileName = "src\\default.png";
     if (args.length > 0) fileName = args[0];
     new ImageDicer(fileName);
+    
   }
   
   /**
@@ -157,8 +159,7 @@ public class ImageDicer
     // Add all the operation names from the Hashtable.
     while (e.hasMoreElements())
       processChoice.add((String)e.nextElement());
-    // Add an event listener. This is where the image processing
-    //   actually occurs.
+    // Add an event listener. This is where the image processing actually occurs.
     processChoice.addItemListener(new ItemListener() {
       public void itemStateChanged(ItemEvent ie) {
         if (ie.getStateChange() != ItemEvent.SELECTED) return;
