@@ -160,7 +160,7 @@ public class ImageDicer
     while (e.hasMoreElements())
       processChoice.add((String)e.nextElement());
     // Add an event listener. This is where the image processing actually occurs.
-    processChoice.addItemListener(new ItemListener() {
+    /*processChoice.addItemListener(new ItemListener() {
       public void itemStateChanged(ItemEvent ie) {
         if (ie.getStateChange() != ItemEvent.SELECTED) return;
         String key = processChoice.getSelectedItem();
@@ -170,7 +170,7 @@ public class ImageDicer
         statusLabel.setText("");
         repaint();
       }
-    });
+    });*/
     
     // Create a Button for loading a new image.
     Button loadButton = new Button("Load...");
@@ -185,11 +185,27 @@ public class ImageDicer
         loadImage(path);
       }
     });
+    
+    // Create a Button to apply the transformation
+    Button processButton = new Button("Apply");
+    //Add a listener for the button. This button applies the selected processing
+    processButton.addActionListener(new ActionListener(){
+    	public void actionPerformed(ActionEvent ae){
+    		String key = processChoice.getSelectedItem();
+            statusLabel.setText("Working...");
+            BufferedImageOp op = (BufferedImageOp)mOps.get(key);
+            mBufferedImage = op.filter(mBufferedImage, null);
+            statusLabel.setText("");
+            repaint();
+    	}
+    });
+    
 
     // Add the user controls at the bottom of the window.
     mControlPanel = new Panel();
     mControlPanel.add(loadButton);
     mControlPanel.add(processChoice);
+    mControlPanel.add(processButton);
     mControlPanel.add(statusLabel);
     add(mControlPanel, BorderLayout.SOUTH);
 
