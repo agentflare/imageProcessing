@@ -110,8 +110,8 @@ public class ImageDicer
     //Invert Blue
     short[][] blueInvert = new short[][] { straight, straight, invert };
     mOps.put("Invert blue", new LookupOp(new ShortLookupTable(0, blueInvert), null));
-    //To grayscale, the second half is just to make the hashmap have a key. This is probably bad coding practice. Oh well #yolo
-    mOps.put("Greyscale-Average",new LookupOp(new ShortLookupTable(0,invert),null));
+    //To grayscale
+    mOps.put("Greyscale-Average",new LookupOp(new ShortLookupTable(0,straight),null));
     //Desaturate
     mOps.put("Desaturate", new LookupOp(new ShortLookupTable(0,straight),null));
     //Remove Green
@@ -270,7 +270,7 @@ public class ImageDicer
     });
     
     // Create a Button to apply the transformation
-    Button processButton = new Button("Apply");
+    Button processButton = new Button("Apply Transform");
     //Add a listener for the button. This button applies the selected processing
     processButton.addActionListener(new ActionListener(){
     	public void actionPerformed(ActionEvent ae){
