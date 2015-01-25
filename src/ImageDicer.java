@@ -97,24 +97,98 @@ public class ImageDicer
     short[] straight = new short[256];
     for (int i = 0; i < 256; i++) {
       posterize[i] = (short)(i - (i % 32));
-      posterizeLevel2[i] = (short)(i-i%128);
+      posterizeLevel2[i] = (short)(Math.round(i/128)*255);
       invert[i] = (short)(255 - i);
       straight[i] = (short)i;
     }
-    
+    //Posterize 8 levels
     mOps.put("Posterize", new LookupOp(new ShortLookupTable(0, posterize),null));
+    //Posterize 2 levels
     mOps.put("PosterizeLevel2", new LookupOp(new ShortLookupTable(0,posterizeLevel2),null));
+    //Invert all channels
     mOps.put("Invert", new LookupOp(new ShortLookupTable(0, invert), null));
+    //Invert Blue
     short[][] blueInvert = new short[][] { straight, straight, invert };
     mOps.put("Invert blue", new LookupOp(new ShortLookupTable(0, blueInvert), null));
-    
+    //To grayscale, the second half is just to make the hashmap have a key. This is probably bad coding practice. Oh well #yolo
+    mOps.put("Greyscale-Average",new LookupOp(new ShortLookupTable(0,invert),null));
+    //Desaturate
+    mOps.put("Desaturate", new LookupOp(new ShortLookupTable(0,straight),null));
+    //Remove Green
+    mOps.put("Remove Colour", new LookupOp(new ShortLookupTable(0,straight),null));
     // Thresholding
     mOps.put("Threshold 192", createThresholdOp(192, 0, 255));
     mOps.put("Threshold 128", createThresholdOp(128, 0, 255));
     mOps.put("Threshold 64", createThresholdOp(64, 0, 255));
   }
-  
+  //Gets pixel information. Pretty much a utility class. Probably useless
+  private static int[] getPixelData(BufferedImage img, int x, int y) 
+  {
+	  int argb = img.getRGB(x, y);
 
+	  int rgb[] = new int[] {
+	      (argb >> 16) & 0xff, //red
+	      (argb >>  8) & 0xff, //green
+	      (argb      ) & 0xff  //blue
+	  };
+
+	  return rgb;
+  }
+  //Converts to grayscale
+  private void createGrayscale(BufferedImage img)
+  {
+	  int w=img.getWidth();
+	  int h=img.getHeight();
+	  for(int i=0;i<h;i++)
+	  {
+		  for(int j=0;j<w;j++)
+		  {
+			  int dataBuffInt = img.getRGB(j, i); 
+			  Color c = new Color(dataBuffInt);
+			  int avg=(c.getGreen()+c.getRed()+c.getBlue())/3;
+			  Color newC=new Color(avg,avg,avg);
+			  img.setRGB(j, i, newC.getRGB());
+		  }
+	  }
+  }
+  //Desaturates by setting all pixels to te saturation value
+  private void desaturate(BufferedImage img,double saturation)
+  {
+	  int w=img.getWidth();
+	  int h=img.getHeight();
+	  for(int i=0;i<h;i++)
+	  {
+		  for(int j=0;j<w;j++)
+		  {
+			  int dataBuffInt = img.getRGB(j, i); 
+			  Color c = new Color(dataBuffInt);
+			  float[] l=new float[4];
+			  Color.RGBtoHSB(c.getRed(),c.getGreen(), c.getBlue(),l);
+			  l[1]=(float)saturation;
+			  Color newC=Color.getHSBColor(l[0], l[1], l[2]);
+			  img.setRGB(j, i, newC.getRGB());
+		  }
+	  }
+  }
+  //Removes all pixels of all matching colours
+  private void removeColour(BufferedImage img, int r, int g, int b)
+  {
+	  int w=img.getWidth();
+	  int h=img.getHeight();
+	  for(int i=0;i<h;i++)
+	  {
+		  for(int j=0;j<w;j++)
+		  {
+			  int dataBuffInt = img.getRGB(j, i); 
+			  Color c = new Color(dataBuffInt);
+			  if(c.getRed()==r && c.getGreen()==g && c.getBlue()==b)
+			  {
+				  Color newC=new Color(0,0,0);
+				  img.setRGB(j, i, newC.getRGB());
+			  }
+		  }
+	  }
+  }
   /**
    * createThresholdOp() uses a LookupOp to simulate a
    * thresholding operation.
@@ -130,7 +204,7 @@ public class ImageDicer
       }
     return new LookupOp(new ShortLookupTable(0, thresholdArray), null);
   }
-
+  
   /**
    * A member variable, mControlPanel, keeps track of the panel
    * that contains the user controls. This panel's size has to
@@ -151,15 +225,25 @@ public class ImageDicer
     setLayout(new BorderLayout());
   
     // Use a Label to display status messages to the user.
-    final Label statusLabel = new Label("Welcome to " + kBanner + ".");
+    final Label statusLabel = new Label("");
     
     // Create a list of operations.
     final Choice processChoice = new Choice();
     Enumeration e = mOps.keys();
+    Object[] keys = mOps.keySet().toArray();
+    Arrays.sort(keys);
     // Add all the operation names from the Hashtable.
-    while (e.hasMoreElements())
-      processChoice.add((String)e.nextElement());
+    /*while (e.hasMoreElements())
+    {
+      //processChoice.add((String)e.nextElement());
+    	
+    }*/
+    for(int i=0;i<keys.length;i++)
+    {
+    	processChoice.add((String)keys[i]);
+    }
     // Add an event listener. This is where the image processing actually occurs.
+    // Removed because it's fucking inconvenient.
     /*processChoice.addItemListener(new ItemListener() {
       public void itemStateChanged(ItemEvent ie) {
         if (ie.getStateChange() != ItemEvent.SELECTED) return;
@@ -171,7 +255,6 @@ public class ImageDicer
         repaint();
       }
     });*/
-    
     // Create a Button for loading a new image.
     Button loadButton = new Button("Load...");
     // Add a listener for the button. It pops up a file dialog
@@ -193,10 +276,31 @@ public class ImageDicer
     	public void actionPerformed(ActionEvent ae){
     		String key = processChoice.getSelectedItem();
             statusLabel.setText("Working...");
-            BufferedImageOp op = (BufferedImageOp)mOps.get(key);
-            mBufferedImage = op.filter(mBufferedImage, null);
-            statusLabel.setText("");
-            repaint();
+            if(key.equals("Greyscale-Average"))
+            {
+            	createGrayscale(mBufferedImage);
+	            statusLabel.setText("");
+            	repaint();
+            }
+            if(key.equals("Desaturate"))
+            {
+            	desaturate(mBufferedImage,0.05);
+	            statusLabel.setText("");
+            	repaint();
+            }
+            if(key.equals("Remove Colour"))
+            {
+            	removeColour(mBufferedImage,0,255,0);
+	            statusLabel.setText("");
+            	repaint();
+            }
+            else
+            {
+	            BufferedImageOp op = (BufferedImageOp)mOps.get(key);
+	            mBufferedImage = op.filter(mBufferedImage, null);
+	            statusLabel.setText("");
+	            repaint();
+            }
     	}
     });
     
